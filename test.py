@@ -1,9 +1,10 @@
-import dpll 
+import dpll
+from utils import *
 
 def make_assignment (a: list[int]) :
     return [(x, int(-1)) for x in a]
 
-def make_formula (a: list[list[int]|None]) -> dpll.Formula : 
+def make_formula (a: list[list[int]|None]) -> Formula : 
     return [None if x == None else set(x) for x in a]
 
 def test_assign_clause_1 () :
@@ -94,7 +95,16 @@ def test_learn_1 ():
     result = dpll.learn(PA, 3, F)
     assert result == set([-1, -4])
 
+def test_solve_1 (): 
+    """in class example"""
+    F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
+    result = dpll.solve(F)
+    assert result != None
+    assert all(x == None for x in dpll.assign_formula(make_assignment(map_first(result)), F))
+
 if __name__ == "__main__" :
+    os.environ["ENV"] = "DEBUG"
+
     test_assign_clause_1()
     test_assign_clause_2()
     test_assign_clause_3()
@@ -107,4 +117,6 @@ if __name__ == "__main__" :
 
     test_unit_prop_3()
     test_learn_1()
+
+    test_solve_1()
     print("all tests passed")

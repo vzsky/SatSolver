@@ -1,14 +1,5 @@
-from abc import update_abstractmethods
 from copy import deepcopy
-
-# Typing and Aliasing
-Literal = int
-Clause = set[Literal] | None
-Assignment = list[tuple[Literal, int]]
-Formula = list[Clause]
-var = abs
-sgn = lambda x:  int(x/abs(x))
-
+from utils import *
 
 def assign_clause (assignment: Assignment, clause: Clause) -> Clause : 
     if clause == None: return None
@@ -25,12 +16,17 @@ def assign_formula (assignment: Assignment, formula: Formula) -> Formula :
     return [ assign_clause(assignment, clause) for clause in formula ]
 
 def unit_propagate (assignment: Assignment, formula: Formula) -> tuple[Assignment, Formula] :
-    for ind, clause in enumerate(formula): 
-        if clause != None and len(clause) == 1:
+    ensure (formula == assign_formula(assignment, formula), "unit propagation only receive applied formula")
+    status = True
+    while status: 
+        status = False
+        for ind, clause in enumerate(formula): 
+            if clause == None or len(clause) != 1: continue
+            status = True
             lit = list(clause)[0]
             assignment.append((lit, ind))
-            assigned_formula = assign_formula(assignment, formula)
-            return unit_propagate (assignment, assigned_formula)
+            formula = assign_formula([(lit, ind)], formula)
+            break 
     return assignment, formula
 
 def backtrack (assignment: Assignment, clause: Clause) -> Assignment : 
@@ -39,17 +35,15 @@ def backtrack (assignment: Assignment, clause: Clause) -> Assignment :
     return assignment
 
 def resolution (c1: Clause, c2: Clause, lit: Literal) -> Clause : 
-    if c1 == None or c2 == None : 
-        raise Exception ("resolution cannot take on empty clause")
-    if (lit not in c1 or -lit not in c2) and (-lit not in c1 or lit not in c2): 
-        raise Exception ("given literal is not a resoluble literal")
+    ensure (c1 != None and c2 != None, "resolution cannot take on empty clause")
+    ensure ((lit in c1 and -lit in c2) or (-lit in c1 and lit in c2),                   # type: ignore 
+            "given literal is not a resoluble literal")
 
-    return c1.union(c2) - set([lit, -lit])
+    return c1.union(c2) - set([lit, -lit])                                              # type: ignore
 
 def learn (assignment: Assignment, conflictid: int, unapplied_formula: Formula) -> Clause : 
     conflict = unapplied_formula[conflictid]
-    if conflict == None: 
-        raise Exception("learning a formula without conflict")
+    ensure (conflict != None, "learning a formula without conflict") 
     for (asm, ind) in reversed(assignment) :
         if ind == -1 : continue
         if asm not in conflict and -asm not in conflict : continue           # type: ignore
@@ -63,12 +57,13 @@ def decision (formula) -> Literal :
             return list(clause)[0]
     raise Exception("formula is satisfied but reach decision")
 
-def dpll (formula: Formula) -> Assignment | None :
+def solve (formula: Formula) -> Assignment | None :
     unapplied_formula = formula
 
     assignment = []
     while True: 
         assignment, formula = unit_propagate(assignment, formula)
+
         if all(c == None for c in formula) : 
             return assignment 
 
@@ -82,10 +77,14 @@ def dpll (formula: Formula) -> Assignment | None :
 
             learned_clause = learn(assignment, conflictid, unapplied_formula)
             if learned_clause == set() : return None
-            formula = unapplied_formula + [learned_clause]
+            unapplied_formula = unapplied_formula + [learned_clause]
+            formula = unapplied_formula
             assignment = backtrack(assignment, learned_clause)
+            formula = assign_formula(assignment, formula)
             continue
-        lit = decision(formula)
-        assignment.append((lit, -1))
 
+        lit = decision(formula)
+        ensure (lit not in map_first(assignment), "decision cannot be assigned variable")
+        assignment.append((lit, -1))
+        formula = assign_formula([(lit, -1)], formula)
 
