@@ -3,24 +3,26 @@ from utils import *
 
 def assign_clause (assignment: Assignment, clause: Clause) -> Clause : 
     if clause == None: return None
-    result = deepcopy(clause)
-    for lit in clause: 
-        for (asm, _) in assignment : 
+    rem = set()
+    for (asm, _) in assignment : 
+        for lit in clause: 
             if asm == lit: return None
             if var(asm) == var(lit): 
-                result.remove(lit) 
+                rem.add(lit)
                 break
-    return result
+    return clause - rem
 
 def assign_formula (assignment: Assignment, formula: Formula) -> Formula :
-    return [ assign_clause(assignment, clause) for clause in formula ]
+    formula = { ind : assign_clause(assignment, clause) for ind, clause in formula.items() }
+    formula = { i:c for i, c in formula.items() if c != None }
+    return formula
 
 def unit_propagate (assignment: Assignment, formula: Formula) -> tuple[Assignment, Formula] :
     ensure (formula == assign_formula(assignment, formula), "unit propagation only receive applied formula")
     status = True
     while status: 
         status = False
-        for ind, clause in enumerate(formula): 
+        for ind, clause in formula.items(): 
             if clause == None or len(clause) != 1: continue
             status = True
             lit = list(clause)[0]
@@ -52,7 +54,7 @@ def learn (assignment: Assignment, conflictid: int, unapplied_formula: Formula) 
 
 def decision (formula) -> Literal : 
     # for now, any will do 
-    for clause in formula : 
+    for clause in formula.values() : 
         if clause != None : 
             return list(clause)[0]
     raise Exception("formula is satisfied but reach decision")
@@ -61,24 +63,28 @@ def solve (formula: Formula) -> Assignment | None :
     unapplied_formula = formula
 
     assignment = []
-    while True: 
+    while True:
+
+        if os.environ["ENV"] == "DEBUG" : 
+            print("current: ", len(assignment), "formula remain: ", len(formula))
+
         assignment, formula = unit_propagate(assignment, formula)
 
-        if all(c == None for c in formula) : 
+        if formula == {} : 
             return assignment 
 
-        if any(c == set() for c in formula) :
-            conflictid = None 
-            for ind, c in enumerate(formula) : 
-                if c == set(): 
-                    conflictid = ind
-                    break 
-            assert conflictid != None
+        conflictid = None 
+        for ind, c in formula.items() : 
+            if c == set(): 
+                conflictid = ind
+                break 
 
+        if conflictid != None: 
             learned_clause = learn(assignment, conflictid, unapplied_formula)
             if learned_clause == set() : return None
-            unapplied_formula = unapplied_formula + [learned_clause]
-            formula = unapplied_formula
+            length = len(unapplied_formula) 
+            unapplied_formula[length] = learned_clause
+            formula = deepcopy(unapplied_formula)
             assignment = backtrack(assignment, learned_clause)
             formula = assign_formula(assignment, formula)
             continue

@@ -5,7 +5,8 @@ def make_assignment (a: list[int]) :
     return [(x, int(-1)) for x in a]
 
 def make_formula (a: list[list[int]|None]) -> Formula : 
-    return [None if x == None else set(x) for x in a]
+    formula = dict(enumerate([None if x == None else set(x) for x in a]))
+    return { i:c for i, c in formula.items() if c != None }
 
 def test_assign_clause_1 () :
     A = make_assignment([1, 2, 3])
@@ -39,7 +40,7 @@ def test_assign_formula_2 ():
 
 def test_unit_prop_1 (): 
     A = make_assignment([])
-    F: dpll.Formula = [set([-1]), set([1, 2, 3]), set([1, -3])]
+    F = make_formula([[-1], [1, 2, 3], [1, -3]])
     result = dpll.unit_propagate(A, F)
     rA = [(-1, 0), (-3, 2), (2, 1)]
     rF = dpll.assign_formula(rA, F)
@@ -100,7 +101,7 @@ def test_solve_1 ():
     F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
     result = dpll.solve(F)
     assert result != None
-    assert all(x == None for x in dpll.assign_formula(make_assignment(map_first(result)), F))
+    assert all(x == None for x in dpll.assign_formula(make_assignment(map_first(result)), F).values())
 
 if __name__ == "__main__" :
     os.environ["ENV"] = "DEBUG"

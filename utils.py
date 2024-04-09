@@ -3,7 +3,7 @@ import os
 Literal = int
 Clause = set[Literal] | None
 Assignment = list[tuple[Literal, int]]
-Formula = list[Clause]
+Formula = dict[int, Clause]
 var = abs
 sgn = lambda x:  int(x/abs(x))
 

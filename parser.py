@@ -32,7 +32,7 @@ def parse (filename) :
         if len(formula) != nclause : 
             raise Exception ("number of clause doesn't match")
         
-        return formula
+        return dict(enumerate(formula))
     
 
 

@@ -6,7 +6,7 @@ from utils import *
 
 if __name__ == "__main__" :
 
-    os.environ["ENV"] = "TIME" # "DEBUG"
+    os.environ["ENV"] = "DEBU" # "DEBUG"
 
     if len(sys.argv) != 2: 
         print("expected ONE argument")
