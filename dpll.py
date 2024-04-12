@@ -1,7 +1,7 @@
-from copy import deepcopy
+import random
 from utils import *
 
-def assign_clause (assignment: Assignment, clause: Clause) -> Clause : 
+def assign_clause (assignment: Assignment, clause: Clause) -> Clause | None : 
     if clause == None: return None
     rem = set()
     for (asm, _) in assignment : 
@@ -12,30 +12,42 @@ def assign_clause (assignment: Assignment, clause: Clause) -> Clause :
                 break
     return clause - rem
 
-def assign_formula (assignment: Assignment, formula: Formula) -> Formula :
-    formula = { ind : assign_clause(assignment, clause) for ind, clause in formula.items() }
-    formula = { i:c for i, c in formula.items() if c != None }
-    return formula
+def assign_formula (assignment: Assignment, formula: Formula) -> tuple[Formula, list[int], list[int]] :
+    f = { ind : assign_clause(assignment, clause) for ind, clause in formula.items() }
+    formula = { i:c for i, c in f.items() if c != None }
+    contradicts = [i for i, c in formula.items() if c == set()]
+    units = [i for i, c in formula.items() if len(c) == 1]
+    return formula, contradicts, units
 
-def unit_propagate (assignment: Assignment, formula: Formula) -> tuple[Assignment, Formula] :
-    ensure (formula == assign_formula(assignment, formula), "unit propagation only receive applied formula")
-    status = True
-    while status: 
-        status = False
-        for ind, clause in formula.items(): 
-            if clause == None or len(clause) != 1: continue
-            status = True
-            lit = list(clause)[0]
+def unit_propagate (assignment: Assignment, formula: Formula, units: list[int]) -> tuple[Assignment, list[int], Formula] :
+    ensure (formula == assign_formula(assignment, formula)[0], "unit propagation only receive applied formula")
+
+    contradicts = []
+    stack = units
+    while len(stack) : 
+        ind = stack.pop()
+        if ind in formula:
+            lit = list(formula[ind])[0]
             assignment.append((lit, ind))
-            formula = assign_formula([(lit, ind)], formula)
-            break 
-    return assignment, formula
+            formula, contradicts, units = assign_formula([(lit, ind)], formula)
+            if len(contradicts) != 0: 
+                return assignment, contradicts, formula
+            stack += units
+
+    return assignment, contradicts, formula
 
 def backtrack (assignment: Assignment, clause: Clause) -> Assignment : 
-    while (assign_clause(assignment, clause) == set()) : 
-        assignment.pop()
-    return assignment
+    l = 0 
+    r = len(assignment)-1
+    while (l < r) : 
+        mid = (l+r+1)//2
+        if assign_clause(assignment[:mid], clause) == set() :
+            r = mid-1
+        else : 
+            l = mid
+    return assignment[:l]
 
+# CAN WE RETURN NONE HERE?
 def resolution (c1: Clause, c2: Clause, lit: Literal) -> Clause : 
     ensure (c1 != None and c2 != None, "resolution cannot take on empty clause")
     ensure ((lit in c1 and -lit in c2) or (-lit in c1 and lit in c2),                   # type: ignore 
@@ -52,45 +64,57 @@ def learn (assignment: Assignment, conflictid: int, unapplied_formula: Formula) 
         conflict = resolution (conflict, unapplied_formula[ind], asm)
     return conflict
 
-def decision (formula) -> Literal : 
-    # for now, any will do 
+def count_occurrence (formula) : 
+    count = {}
     for clause in formula.values() : 
-        if clause != None : 
-            return list(clause)[0]
-    raise Exception("formula is satisfied but reach decision")
+        for lit in clause : 
+            if lit not in count: 
+                count[lit] = 0
+            count[lit] += 1
+    return count
+
+def decision (formula) -> Literal : 
+    count = count_occurrence(formula)
+    result = random.choices(list(count.keys()), list(count.values())) 
+    return result[0]
 
 def solve (formula: Formula) -> Assignment | None :
     unapplied_formula = formula
 
     assignment = []
+    contradicts = []
+    units = []
+
     while True:
+        # if len(assignment) != 0: DEBUG("top assign: ", assignment[-1])
+        # DEBUG("current: ", len(assignment), "formula remain: ", len(formula), "total: ", len(unapplied_formula))
 
-        if os.environ["ENV"] == "DEBUG" : 
-            print("current: ", len(assignment), "formula remain: ", len(formula))
-
-        assignment, formula = unit_propagate(assignment, formula)
+        assignment, contradicts, formula = unit_propagate(assignment, formula, units)
 
         if formula == {} : 
+            DEBUG("found assignment", assignment)
+            DEBUG("result formula length: ", len(unapplied_formula))
             return assignment 
 
-        conflictid = None 
-        for ind, c in formula.items() : 
-            if c == set(): 
-                conflictid = ind
-                break 
-
-        if conflictid != None: 
-            learned_clause = learn(assignment, conflictid, unapplied_formula)
-            if learned_clause == set() : return None
+        has_learned = False
+        while len(contradicts) != 0 and contradicts[0] != None: 
+            # DEBUG("assignment: ", assignment)
+            learned_clause = learn(assignment, contradicts[0], unapplied_formula)
+            if learned_clause == set() : 
+                DEBUG("unsat")
+                DEBUG("result formula length: ", len(unapplied_formula))
+                return None
             length = len(unapplied_formula) 
             unapplied_formula[length] = learned_clause
-            formula = deepcopy(unapplied_formula)
             assignment = backtrack(assignment, learned_clause)
-            formula = assign_formula(assignment, formula)
-            continue
-
-        lit = decision(formula)
-        ensure (lit not in map_first(assignment), "decision cannot be assigned variable")
-        assignment.append((lit, -1))
-        formula = assign_formula([(lit, -1)], formula)
+            formula, contradicts, units = assign_formula(assignment, unapplied_formula)
+            has_learned = True
+            # DEBUG("LEARN", learned_clause)
+            
+        if not has_learned: 
+            lit = decision(formula)
+            ensure (lit not in map_first(assignment), "decision cannot be assigned variable")
+            assignment.append((lit, -1))
+            # DEBUG("guessing", lit)
+            formula, contradicts, units = assign_formula([(lit, -1)], formula)
 

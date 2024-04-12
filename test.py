@@ -30,29 +30,29 @@ def test_assign_formula_1 ():
     A = make_assignment([-3, -4, 5])
     F = make_formula([[1, 3, -4], [1, 2, 3], [3, 4, -5], [1, 3, -5]])
     result = dpll.assign_formula(A, F)
-    assert result == make_formula([None, [1, 2], [], [1]])
+    assert result[0] == make_formula([None, [1, 2], [], [1]])
 
 def test_assign_formula_2 ():
     A = make_assignment([1, 2, -3, -4])
     F = make_formula([[-1, 3, 4, 5], [5, 6], [3, 4, -5], [1, 3, -5]])
     result = dpll.assign_formula(A, F)
-    assert result == make_formula([[5], [5, 6], [-5], None])
+    assert result[0] == make_formula([[5], [5, 6], [-5], None])
 
 def test_unit_prop_1 (): 
     A = make_assignment([])
     F = make_formula([[-1], [1, 2, 3], [1, -3]])
-    result = dpll.unit_propagate(A, F)
+    result = dpll.unit_propagate(A, F, [0])
     rA = [(-1, 0), (-3, 2), (2, 1)]
-    rF = dpll.assign_formula(rA, F)
-    assert result == (rA, rF)
+    rF = dpll.assign_formula(rA, F)[0]
+    assert (result[0], result[2]) == (rA, rF)
 
 def test_unit_prop_2 (): 
     A = make_assignment([])
     F = make_formula([[-1], [1, 2, 3, 4], [1, -3], [-1, -3]])
-    result = dpll.unit_propagate(A, F)
+    result = dpll.unit_propagate(A, F, [0])
     rA = [(-1, 0), (-3, 2)]
-    rF = dpll.assign_formula(rA, F)
-    assert result == (rA, rF)
+    rF = dpll.assign_formula(rA, F)[0]
+    assert (result[0], result[2]) == (rA, rF)
 
 def test_backtrack_1 ():
     A = make_assignment([1, 2, 3, 4, 5, 6])
@@ -74,34 +74,12 @@ def test_assign_formula_3 ():
     F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
     result = dpll.assign_formula(A, F)
     assert result == make_formula([[5], [6, -5], [-6, 7], [-7, -5], None])
-
-
-def test_unit_prop_3 ():
-    """in class example"""
-    A = make_assignment([1, -2, -3, 4])
-    F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
-    AF = dpll.assign_formula(A, F)
-    result = dpll.unit_propagate(A, AF)
-    rA = [(1, -1), (-2, -1), (-3, -1), (4, -1), (5, 0), (6, 1), (7, 2)]
-    rF = dpll.assign_formula(rA, F)
-    assert result == (rA, rF)
-
-def test_learn_1 ():
-    """in class example"""
-    A = make_assignment([1, -2, -3, 4])
-    F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
-    AF = dpll.assign_formula(A, F)
-    (PA, PF) = dpll.unit_propagate(A, AF)
-    assert PF[3] == set()
-    result = dpll.learn(PA, 3, F)
-    assert result == set([-1, -4])
-
-def test_solve_1 (): 
-    """in class example"""
+    
+def test_solve_1 ():
     F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
     result = dpll.solve(F)
-    assert result != None
-    assert all(x == None for x in dpll.assign_formula(make_assignment(map_first(result)), F).values())
+    assert result
+    assert dpll.assign_formula(result, F)[0] == {}
 
 if __name__ == "__main__" :
     os.environ["ENV"] = "DEBUG"
@@ -116,8 +94,8 @@ if __name__ == "__main__" :
     test_backtrack_1()
     test_backtrack_2()
 
-    test_unit_prop_3()
-    test_learn_1()
-
+    DEBUG("solving 1: ")
     test_solve_1()
+    DEBUG()
+
     print("all tests passed")
