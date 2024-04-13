@@ -1,42 +1,55 @@
-import random
 from utils import *
 
 def assign_clause (assignment: Assignment, clause: Clause) -> Clause | None : 
-    if clause == None: return None
-    rem = set()
     for (asm, _) in assignment : 
-        for lit in clause: 
-            if asm == lit: return None
-            if var(asm) == var(lit): 
-                rem.add(lit)
-                break
-    return clause - rem
+        if asm in clause: return None
+        if -asm in clause: clause = clause.difference([-asm])
+    return clause
 
-def assign_formula (assignment: Assignment, formula: Formula) -> tuple[Formula, list[int], list[int]] :
+def assign_formula (assignment: Assignment, formula: Formula) -> Formula :
     f = { ind : assign_clause(assignment, clause) for ind, clause in formula.items() }
     formula = { i:c for i, c in f.items() if c != None }
-    contradicts = [i for i, c in formula.items() if c == set()]
-    units = [i for i, c in formula.items() if len(c) == 1]
-    return formula, contradicts, units
+    return formula
 
-def unit_propagate (assignment: Assignment, formula: Formula, units: list[int]) -> tuple[Assignment, list[int], Formula] :
-    ensure (formula == assign_formula(assignment, formula)[0], "unit propagation only receive applied formula")
+def get_contradicts (formula) -> list[int] :
+    return [i for i, c in formula.items() if c == set()]
 
-    contradicts = []
-    stack = units
+def get_units (formula) -> list[int] :
+    return [i for i, c in formula.items() if len(c) == 1]
+
+def pure_propagate (assignment: Assignment, formula: Formula) :
+    counter = count_occurrence(formula)
+
+    stable = False
+    while stable == False: 
+        stable = True
+        for lit in counter.keys(): 
+            if -lit not in counter.keys(): 
+                assignment.append((lit, -2))
+                formula = assign_formula([(lit, -2)], formula)
+                counter = count_occurrence(formula)
+                stable = False
+
+    return assignment, formula
+
+def unit_propagate (assignment: Assignment, formula: Formula) :
+    ensure (formula == assign_formula(assignment, formula), "unit propagation only receive applied formula")
+
+    stack = get_units(formula)
     while len(stack) : 
         ind = stack.pop()
         if ind in formula:
+            if len(formula[ind]) == 0: continue
             lit = list(formula[ind])[0]
             assignment.append((lit, ind))
-            formula, contradicts, units = assign_formula([(lit, ind)], formula)
-            if len(contradicts) != 0: 
-                return assignment, contradicts, formula
-            stack += units
+            formula = assign_formula([(lit, ind)], formula)
+            # RETURNING ON CONTRACICT HERE NAKES LEARNING WORSE
+            stack = get_units(formula)
 
-    return assignment, contradicts, formula
+    return assignment, formula
 
 def backtrack (assignment: Assignment, clause: Clause) -> Assignment : 
+    # TODO: a constant backtrack can be done. 
     l = 0 
     r = len(assignment)-1
     while (l < r) : 
@@ -60,6 +73,7 @@ def learn (assignment: Assignment, conflictid: int, unapplied_formula: Formula) 
     ensure (conflict != None, "learning a formula without conflict") 
     for (asm, ind) in reversed(assignment) :
         if ind == -1 : continue
+        if ind == -2 : continue
         if asm not in conflict and -asm not in conflict : continue           # type: ignore
         conflict = resolution (conflict, unapplied_formula[ind], asm)
     return conflict
@@ -74,22 +88,24 @@ def count_occurrence (formula) :
     return count
 
 def decision (formula) -> Literal : 
-    count = count_occurrence(formula)
-    result = random.choices(list(count.keys()), list(count.values())) 
-    return result[0]
+    for clause in formula.values() : 
+        if clause != None : 
+            return list(clause)[0]
+    raise Exception("formula is satisfied but reach decision")
+    # RANDOM IS DEFINITELY NOT A GOOD HEURISTIC
 
 def solve (formula: Formula) -> Assignment | None :
     unapplied_formula = formula
 
     assignment = []
-    contradicts = []
-    units = []
 
     while True:
         # if len(assignment) != 0: DEBUG("top assign: ", assignment[-1])
-        # DEBUG("current: ", len(assignment), "formula remain: ", len(formula), "total: ", len(unapplied_formula))
-
-        assignment, contradicts, formula = unit_propagate(assignment, formula, units)
+        DEBUG("current asm: ", len(assignment), "formula remain: ", len(formula), "total: ", len(unapplied_formula))
+        # DEBUG(assignment)
+        
+        assignment, formula = unit_propagate(assignment, formula)
+        assignment, formula = pure_propagate(assignment, formula)
 
         if formula == {} : 
             DEBUG("found assignment", assignment)
@@ -97,6 +113,7 @@ def solve (formula: Formula) -> Assignment | None :
             return assignment 
 
         has_learned = False
+        contradicts = get_contradicts(formula)
         while len(contradicts) != 0 and contradicts[0] != None: 
             # DEBUG("assignment: ", assignment)
             learned_clause = learn(assignment, contradicts[0], unapplied_formula)
@@ -107,7 +124,8 @@ def solve (formula: Formula) -> Assignment | None :
             length = len(unapplied_formula) 
             unapplied_formula[length] = learned_clause
             assignment = backtrack(assignment, learned_clause)
-            formula, contradicts, units = assign_formula(assignment, unapplied_formula)
+            formula = assign_formula(assignment, unapplied_formula)
+            contradicts = get_contradicts(formula)
             has_learned = True
             # DEBUG("LEARN", learned_clause)
             
@@ -116,5 +134,5 @@ def solve (formula: Formula) -> Assignment | None :
             ensure (lit not in map_first(assignment), "decision cannot be assigned variable")
             assignment.append((lit, -1))
             # DEBUG("guessing", lit)
-            formula, contradicts, units = assign_formula([(lit, -1)], formula)
+            formula = assign_formula([(lit, -1)], formula)
 
