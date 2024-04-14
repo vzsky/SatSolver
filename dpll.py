@@ -1,4 +1,16 @@
 from utils import *
+from copy import deepcopy
+
+def ensure_pure (ind) :
+    def dec (f) : 
+        def func (*args) : 
+            new_args = deepcopy(args)
+            result = f(*new_args)
+            for i in ind :
+                assert new_args[i] == args[i]
+            return result
+        return func
+    return dec
 
 def assign_clause (assignment: Assignment, clause: Clause) -> Clause | None : 
     for (asm, _) in assignment : 
@@ -7,9 +19,12 @@ def assign_clause (assignment: Assignment, clause: Clause) -> Clause | None :
     return clause
 
 def assign_formula (assignment: Assignment, formula: Formula) -> Formula :
-    f = { ind : assign_clause(assignment, clause) for ind, clause in formula.items() }
-    formula = { i:c for i, c in f.items() if c != None }
-    return formula
+    new_formula = {}
+    for index, clause in formula.items():
+        new_clause = assign_clause(assignment, clause)
+        if new_clause is not None:
+            new_formula[index] = new_clause
+    return new_formula
 
 def get_contradicts (formula) -> list[int] :
     return [i for i, c in formula.items() if c == set()]

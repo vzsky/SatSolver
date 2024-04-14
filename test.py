@@ -20,6 +20,18 @@ def test_assign_clause_2 () :
     result = dpll.assign_clause(A, C)
     assert result == set([1, 2])
 
+def test_assign_clause_fast_1 () :
+    A = make_assignment([1, 2, 3])
+    C = set([1, 2, 3])
+    result = dpll.assign_clause_fast(A, C)
+    assert result == None
+
+def test_assign_clause_fast_2 () :
+    A = make_assignment([-3, 4, 5])
+    C = set([1, 2, 3])
+    result = dpll.assign_clause_fast(A, C)
+    assert result == set([1, 2])
+
 def test_assign_clause_3 () :
     A = make_assignment([-3, -4, 5])
     C = set([1, 3, -4])
@@ -30,29 +42,41 @@ def test_assign_formula_1 ():
     A = make_assignment([-3, -4, 5])
     F = make_formula([[1, 3, -4], [1, 2, 3], [3, 4, -5], [1, 3, -5]])
     result = dpll.assign_formula(A, F)
-    assert result[0] == make_formula([None, [1, 2], [], [1]])
+    assert result == make_formula([None, [1, 2], [], [1]])
 
 def test_assign_formula_2 ():
     A = make_assignment([1, 2, -3, -4])
     F = make_formula([[-1, 3, 4, 5], [5, 6], [3, 4, -5], [1, 3, -5]])
     result = dpll.assign_formula(A, F)
-    assert result[0] == make_formula([[5], [5, 6], [-5], None])
+    assert result == make_formula([[5], [5, 6], [-5], None])
+
+def test_assign_formula_unpure_1 ():
+    A = make_assignment([-3, -4, 5])
+    F = make_formula([[1, 3, -4], [1, 2, 3], [3, 4, -5], [1, 3, -5]])
+    result = dpll.assign_formula(A, F, pure=False)
+    assert result == make_formula([None, [1, 2], [], [1]])
+
+def test_assign_formula_unpure_2 ():
+    A = make_assignment([1, 2, -3, -4])
+    F = make_formula([[-1, 3, 4, 5], [5, 6], [3, 4, -5], [1, 3, -5]])
+    result = dpll.assign_formula(A, F, pure=False)
+    assert result == make_formula([[5], [5, 6], [-5], None])
 
 def test_unit_prop_1 (): 
     A = make_assignment([])
     F = make_formula([[-1], [1, 2, 3], [1, -3]])
-    result = dpll.unit_propagate(A, F, [0])
+    result = dpll.unit_propagate(A, F)
     rA = [(-1, 0), (-3, 2), (2, 1)]
-    rF = dpll.assign_formula(rA, F)[0]
-    assert (result[0], result[2]) == (rA, rF)
+    rF = dpll.assign_formula(rA, F)
+    assert result == (rA, rF)
 
 def test_unit_prop_2 (): 
     A = make_assignment([])
     F = make_formula([[-1], [1, 2, 3, 4], [1, -3], [-1, -3]])
-    result = dpll.unit_propagate(A, F, [0])
+    result = dpll.unit_propagate(A, F)
     rA = [(-1, 0), (-3, 2)]
-    rF = dpll.assign_formula(rA, F)[0]
-    assert (result[0], result[2]) == (rA, rF)
+    rF = dpll.assign_formula(rA, F)
+    assert result == (rA, rF)
 
 def test_backtrack_1 ():
     A = make_assignment([1, 2, 3, 4, 5, 6])
@@ -79,7 +103,7 @@ def test_solve_1 ():
     F = make_formula([[-1, -4, 5], [-1, 6, -5], [-1, -6, 7], [-1, -7, -5], [1, 4, 6]])
     result = dpll.solve(F)
     assert result
-    assert dpll.assign_formula(result, F)[0] == {}
+    assert dpll.assign_formula(result, F) == {}   
 
 if __name__ == "__main__" :
     os.environ["ENV"] = "DEBUG"

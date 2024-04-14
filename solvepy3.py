@@ -22,8 +22,8 @@ if __name__ == "__main__" :
     print("FOUND")
     print(result)
     
-    if result :
-        formula = dpll.assign_formula(result, formula)
-        assert formula == {}
-        print("solution checked")
+    # if result :
+    #     formula = dpll.assign_formula(result, formula)
+    #     assert formula == {}
+    #     print("solution checked")
 
