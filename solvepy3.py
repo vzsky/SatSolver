@@ -1,6 +1,6 @@
 import os
 import parser 
-import dpll 
+import dpll
 import sys
 import random
 from utils import *
@@ -18,6 +18,7 @@ if __name__ == "__main__" :
     formula = parser.parse(filename)
 
     result = dpll.solve(formula)
+
 
     print("FOUND")
     print(result)
