@@ -1,6 +1,8 @@
 import os
 import parser 
 import dpll
+import dpll2
+import dpll3
 import sys
 import random
 from utils import *
@@ -8,7 +10,8 @@ from utils import *
 if __name__ == "__main__" :
 
     random.seed(42)
-    os.environ["ENV"] = "DEBU" # "DEBUG"
+    os.environ["ENV"] = "RUN" 
+    # os.environ["ENV"] = "DEBUG" 
 
     if len(sys.argv) != 2: 
         print("expected ONE argument")
@@ -17,7 +20,7 @@ if __name__ == "__main__" :
     filename = sys.argv[1]
     formula = parser.parse(filename)
 
-    result = dpll.solve(formula)
+    result = dpll3.solve(formula)
 
 
     print("FOUND")

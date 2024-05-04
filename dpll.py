@@ -1,20 +1,17 @@
 from utils import *
-from copy import deepcopy
+import random
 
 unapplied_formula = {}
 formula = {}
 assignment = []
+variable_count = 0
 
-# def ensure_pure (ind) :
-#     def dec (f) : 
-#         def func (*args) : 
-#             new_args = deepcopy(args)
-#             result = f(*new_args)
-#             for i in ind :
-#                 assert new_args[i] == args[i]
-#             return result
-#         return func
-#     return dec
+def get_variable_count (formula):
+    m = 0
+    for index, clause in formula.items(): 
+        for elem in clause:
+            m = max(m, abs(elem))
+    return m
 
 def assign_clause (assignment: Assignment, clause: Clause) -> Clause | None : 
     for (asm, _) in assignment : 
@@ -113,17 +110,24 @@ def count_occurrence () :
     return count
 
 def decision () -> Literal : 
-    global formula
+    global formula, assignment
 
-    for clause in formula.values() : 
-        if clause != None : 
-            return list(clause)[0]
-    raise Exception("formula is satisfied but reach decision")
-    # RANDOM IS DEFINITELY NOT A GOOD HEURISTIC
+    chosen = [abs(n) for n in map_first(assignment)]
+
+    for index, clause in formula.items() : 
+        e = clause.pop()
+        while e in chosen: 
+            e = clause.pop()
+        clause.add(e)
+        formula[index] = clause
+        return e
+
+    raise Exception("cannot make decision")
 
 def solve (f: Formula) -> Assignment | None :
-    global unapplied_formula, formula, assignment 
+    global unapplied_formula, formula, assignment, variable_count 
 
+    variable_count = get_variable_count(f)
     unapplied_formula = f 
     formula = f
 
@@ -132,7 +136,7 @@ def solve (f: Formula) -> Assignment | None :
     while True:
         # if len(assignment) != 0: DEBUG("top assign: ", assignment[-1])
         DEBUG("current asm: ", len(assignment), "formula remain: ", len(formula), "total: ", len(unapplied_formula))
-        # DEBUG(assignment)
+        DEBUG(assignment)
         
         unit_propagate()
         # pure_propagate()
@@ -159,12 +163,12 @@ def solve (f: Formula) -> Assignment | None :
             assign_formula(assignment)
             contradicts = get_contradicts()
             has_learned = True
-            # DEBUG("LEARN", learned_clause)
+            DEBUG("LEARN", learned_clause)
             
         if not has_learned: 
             lit = decision()
             ensure (lit not in map_first(assignment), "decision cannot be assigned variable")
             assignment.append((lit, -1))
-            # DEBUG("guessing", lit)
+            DEBUG("guessing", lit)
             assign_formula([(lit, -1)])
 
