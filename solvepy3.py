@@ -2,7 +2,6 @@ import os
 import parser 
 import dpll
 import dpll2
-import dpll3
 import sys
 import random
 from utils import *
@@ -20,7 +19,7 @@ if __name__ == "__main__" :
     filename = sys.argv[1]
     formula = parser.parse(filename)
 
-    result = dpll3.solve(formula)
+    result = dpll2.solve(formula)
 
 
     print("FOUND")
