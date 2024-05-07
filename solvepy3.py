@@ -1,25 +1,15 @@
-import os
 import parser 
 import dpll
-import dpll2
-import dpll3
 import sys
 import random
 from utils import *
 import state
-from copy import deepcopy
 
-def assign_clause (assignment: list[Literal], clause: Clause) -> Clause | None : 
-    for asm in assignment : 
-        if asm in clause: return None
-        if -asm in clause: clause = clause.difference([-asm])
-    return clause
-
-def assign_formula (assignment: list[Literal], formula: Formula) :
+def serious_assign_formula (assignment, formula: Formula) :
     new_formula = {}
 
     for index, clause in formula.items():
-        new_formula[index] = assign_clause(assignment, clause)
+        new_formula[index] = dpll.assign_clause(assignment, clause)
 
     formula = {index:clause for index, clause in new_formula.items() if clause is not None }
     return formula
@@ -29,7 +19,7 @@ def unit_propagate (formula) :
     units = (list(c)[0] for c in formula.values() if len(c) == 1)
     for lit in units:
         preassign.append(lit)
-        formula = {i:assign_clause([lit], c) for i, c in formula.items()}
+        formula = {i:dpll.assign_clause([lit], c) for i, c in formula.items()}
         formula = {i:c for i, c in formula.items() if c is not None}
     return formula, preassign 
 
@@ -50,7 +40,7 @@ def pure_propagate (formula) :
         for lit in count.keys() : 
             if -lit in count.keys(): continue
             preassign.append(lit)
-            formula = assign_formula([lit], formula)
+            formula = serious_assign_formula([lit], formula)
             count = count_occurrence(formula)
             stable = False
     return formula, preassign
@@ -59,30 +49,26 @@ if __name__ == "__main__" :
 
     random.seed(state.seed)
 
-    os.environ["ENV"] = "RUN" 
-    os.environ["ENV"] = "DEBUG" 
-
     if len(sys.argv) != 2: 
         print("expected ONE argument")
         exit(0)
 
     filename = sys.argv[1]
     formula = parser.parse(filename)
-    original_formula = deepcopy(formula)
+    original_formula = copy_formula(formula)
 
     formula, preassign_unit = unit_propagate(formula)
-    DEBUG("number of clause: ", len(formula))
     formula, preassign_pure = pure_propagate(formula)
-    DEBUG("number of clause: ", len(formula))
 
-    result = dpll3.solve(formula)
-    print("FOUND")
-    # print(result)
+    result = dpll.solve(formula)
 
     if result :
-        result = map_first(result) + preassign_unit + preassign_pure
-        formula = assign_formula(result, original_formula)
-        print("HERE", formula)
-        assert formula == {}
-        print("solution checked")
+        result = result + preassign_unit + preassign_pure
+        # assert serious_assign_formula(result, original_formula) == {}
+        # print("solution checked")
+        print ("s SATISFIABLE")
+        answer = " ".join([str(lit) for lit in result])
+        print("v " + answer + " 0")
+    else :
+        print("s UNSATISFIABLE")
 

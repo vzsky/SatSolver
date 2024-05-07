@@ -1,5 +1,3 @@
-import os 
-
 Literal = int
 Clause = set[Literal]
 Assignment = list[tuple[Literal, int]]
@@ -17,21 +15,5 @@ def select2 (s: Clause) -> Clause:
         return set([a])
     return set()
 
-#######################################################################
-###                             DEBUG                               ###
-#######################################################################
-
-def ensure (cond, msg) :
-    if os.environ["ENV"] != "DEBUG" : return
-    if not cond : 
-        raise Exception(msg)
-
-def ensureF (cond, msg) :
-    ensure (not cond, msg)
-
 def map_first (ls) : 
     return [x[0] for x in ls]
-
-def DEBUG (*args): 
-    if os.environ["ENV"] == "DEBUG" : 
-        print(*args)

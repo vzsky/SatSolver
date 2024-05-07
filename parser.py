@@ -1,4 +1,3 @@
-import os
 from utils import *
 
 def parse (filename) : 
@@ -14,11 +13,7 @@ def parse (filename) :
                 line = f.readline()
 
 
-            [nvar, nclause] = [int(x) for x in line.strip().split()[2:]]
-
-            if os.environ["ENV"] == "DEBUG":
-                print("formula length: ", nclause)
-                print("variables count: ", nvar)
+            [_, nclause] = [int(x) for x in line.strip().split()[2:]]
 
         except : 
             raise Exception("cannot parse ill-syntax file")
