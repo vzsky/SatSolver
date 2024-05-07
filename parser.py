@@ -34,12 +34,3 @@ def parse (filename) :
             raise Exception ("number of clause doesn't match")
         
         return dict(enumerate(formula))
-    
-def resolution (c1: Clause, c2: Clause, lit: Literal) -> Clause : 
-    ensure (c1 != None and c2 != None, "resolution cannot take on empty clause")
-    ensure ((lit in c1 and -lit in c2) or (-lit in c1 and lit in c2),                   # type: ignore 
-            "given literal is not a resoluble literal")
-
-    return c1.union(c2) - set([lit, -lit])                                              # type: ignore
-
-

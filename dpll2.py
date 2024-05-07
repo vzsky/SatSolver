@@ -104,7 +104,6 @@ def get_units () :
 
 def unit_propagate () :
     global formula, assignment, assignment_lit
-    # ensure (formula == assign_formula(assignment, formula), "unit propagation only receive applied formula")
     stack = get_units()
     try: 
         while True:
@@ -146,7 +145,7 @@ def learn (conflictid: int) -> Clause :
     global unapplied_formula, assignment
 
     conflict = unapplied_formula[conflictid]
-    ensure (conflict != None, "learning a formula without conflict") 
+    # ensure (conflict != None, "learning a formula without conflict") 
     for (asm, ind) in reversed(assignment) :
         if ind == -1 : continue
         if ind == -2 : continue
@@ -198,7 +197,7 @@ def solve (f: Formula) -> Assignment | None :
 
         if formula == {} : 
             # DEBUG("found assignment", assignment)
-            # DEBUG("result formula length: ", len(unapplied_formula))
+            DEBUG("result formula length: ", len(unapplied_formula))
             return assignment 
 
         has_learned = False
@@ -207,8 +206,8 @@ def solve (f: Formula) -> Assignment | None :
             # DEBUG("assignment: ", assignment)
             learned_clause = learn(contradicts[0])
             if learned_clause == set() : 
-                # DEBUG("unsat")
-                # DEBUG("result formula length: ", len(unapplied_formula))
+                DEBUG("unsat")
+                DEBUG("result formula length: ", len(unapplied_formula))
                 return None
             length = len(unapplied_formula) 
             unapplied_formula[length] = learned_clause

@@ -4,8 +4,22 @@ Literal = int
 Clause = set[Literal]
 Assignment = list[tuple[Literal, int]]
 Formula = dict[int, Clause]
-var = abs
-sgn = lambda x:  int(x/abs(x))
+
+def copy_formula (formula: Formula) -> Formula :
+    return { i: set(c) for i, c in formula.items() }
+
+def select2 (s: Clause) -> Clause:
+    if len(s) >= 2: 
+        a, b, *_ = s
+        return set([a, b])
+    if len(s) == 1: 
+        a, *_ = s
+        return set([a])
+    return set()
+
+#######################################################################
+###                             DEBUG                               ###
+#######################################################################
 
 def ensure (cond, msg) :
     if os.environ["ENV"] != "DEBUG" : return
